@@ -1,0 +1,344 @@
+<%- include('partials/header') %>
+
+<div class="container">
+  <div class="claim-detail">
+    <div class="claim-detail-header">
+      <div class="header-top">
+        <a href="/dashboard" class="btn btn-link">
+          <i class="fas fa-arrow-left"></i> Back to Claims
+        </a>
+        <div class="claim-status-badge" style="background-color: <%= claim.status.color || '#999999' %>">
+          <%= (claim.status.status || 'Unknown').toUpperCase() %>
+        </div>
+      </div>
+      <h1 class="claim-title"><%= claim.name %></h1>
+    </div>
+
+    <div class="claim-detail-content">
+      <!-- Group 1: Key Information -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-info-circle"></i> Key Information</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <div class="info-grid">
+            <% const keyFields = claim.customFields.filter(field => 
+              ['Policy Holder', 'Insurance Carrier', 'Claim Number', 'Date of Loss'].includes(field.name)
+            );
+            keyFields.forEach(field => { %>
+              <div class="info-item">
+                <label><%= field.name %></label>
+                <span><%= field.value %></span>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group 2: Financial Information -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-dollar-sign"></i> Financial Details</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <% 
+          const financialFields = claim.customFields.filter(field => 
+            ['RCV', 'ACV', 'Deductible', 'Depreciation'].includes(field.name)
+          );
+          financialFields.forEach(field => { %>
+            <div class="info-item">
+              <label><%= field.name %></label>
+              <span><%= typeof field.value === 'number' ? 
+                field.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : 
+                field.value %></span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Group 3: Location Information -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-map-marker-alt"></i> Location Details</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <% 
+          const locationFields = claim.customFields.filter(field => 
+            ['Property Address', 'Loss Address', 'Property Type'].includes(field.name)
+          );
+          locationFields.forEach(field => { %>
+            <div class="info-item">
+              <label><%= field.name %></label>
+              <span><%= field.value %></span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Group 4: Contact Information -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-address-book"></i> Contact Information</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <% 
+          const contactFields = claim.customFields.filter(field => 
+            ['Phone Number', 'Email', 'Contractor Salesman', 'Key PA'].includes(field.name)
+          );
+          contactFields.forEach(field => { %>
+            <div class="info-item">
+              <label><%= field.name %></label>
+              <span><%= field.value %></span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Group 5: Documents -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-file-alt"></i> Documents</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <!-- Upload Form -->
+          <div class="upload-section">
+            <form action="/dashboard/upload/<%= claim.id %>" method="POST" enctype="multipart/form-data" class="upload-form">
+              <div class="form-group">
+                <label for="fileType">Document Type</label>
+                <select name="fileType" id="fileType" class="form-control" required>
+                  <option value="">Select document type...</option>
+                  <option value="Loss Sheet">Loss Sheet</option>
+                  <option value="Check">Check</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div id="otherTypeContainer" style="display: none;">
+                  <input type="text" name="otherType" id="otherType" class="form-control" 
+                    placeholder="Please specify document type">
+                </div>
+              </div>
+              
+              <div class="file-upload-container">
+                <input type="file" name="document" id="document" class="file-input" required>
+                <label for="document" class="file-label">
+                  <i class="fas fa-cloud-upload-alt"></i>
+                  <span>Choose a file</span>
+                </label>
+                <span class="selected-file-name"></span>
+              </div>
+              <button type="submit" class="btn btn-upload">
+                <i class="fas fa-upload"></i> Upload Document
+              </button>
+            </form>
+          </div>
+
+          <!-- Existing Documents -->
+          <% if (claim.attachments && claim.attachments.length > 0) { %>
+            <div class="documents-grid">
+              <% claim.attachments.forEach(attachment => { %>
+                <a href="<%= attachment.url %>" class="document-card" target="_blank">
+                  <div class="document-icon">
+                    <i class="fas <%= getFileIcon(attachment.title) %>"></i>
+                  </div>
+                  <div class="document-info">
+                    <span class="document-name"><%= attachment.title %></span>
+                    <span class="document-date">
+                      <%= new Date(attachment.date).toLocaleDateString() %>
+                    </span>
+                  </div>
+                </a>
+              <% }); %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Group 6: Additional Information -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-plus-circle"></i> Additional Information</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <% 
+          const additionalFields = claim.customFields.filter(field => 
+            !['Policy Holder', 'Insurance Carrier', 'Claim Number', 'Date of Loss',
+              'RCV', 'ACV', 'Deductible', 'Depreciation',
+              'Property Address', 'Loss Address', 'Property Type',
+              'Phone Number', 'Email', 'Contractor Salesman', 'Key PA'].includes(field.name)
+          );
+          additionalFields.forEach(field => { %>
+            <div class="info-item">
+              <label><%= field.name %></label>
+              <span><%= field.value %></span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  background: var(--card-bg);
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.info-item label {
+  display: block;
+  color: var(--primary-color);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.info-item span {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+.detail-section {
+  background: white;
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5rem;
+  box-shadow: var(--box-shadow);
+}
+
+.detail-section h3 {
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--background-color);
+}
+
+.detail-section h3 i {
+  color: var(--secondary-color);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 1rem 0;
+}
+
+.section-header h3 {
+  margin: 0;
+}
+
+.toggle-icon {
+  transition: transform 0.3s ease;
+  color: var(--primary-color);
+}
+
+.detail-section.expanded .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.section-content {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.detail-section {
+  margin-bottom: 1rem;
+}
+
+.detail-section:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+</style>
+
+<script>
+function getFileIcon(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const icons = {
+    pdf: 'fa-file-pdf',
+    doc: 'fa-file-word',
+    docx: 'fa-file-word',
+    xls: 'fa-file-excel',
+    xlsx: 'fa-file-excel',
+    jpg: 'fa-file-image',
+    jpeg: 'fa-file-image',
+    png: 'fa-file-image',
+    txt: 'fa-file-alt',
+    csv: 'fa-file-csv'
+  };
+  return icons[ext] || 'fa-file';
+}
+
+document.querySelector('.file-input').addEventListener('change', function(e) {
+  const fileName = e.target.files[0]?.name || 'No file selected';
+  document.querySelector('.selected-file-name').textContent = fileName;
+});
+
+document.getElementById('fileType').addEventListener('change', function() {
+  const otherContainer = document.getElementById('otherTypeContainer');
+  const otherInput = document.getElementById('otherType');
+  
+  if (this.value === 'Other') {
+    otherContainer.style.display = 'block';
+    otherInput.required = true;
+  } else {
+    otherContainer.style.display = 'none';
+    otherInput.required = false;
+    otherInput.value = '';
+  }
+});
+
+function toggleSection(header) {
+  const section = header.closest('.detail-section');
+  const content = section.querySelector('.section-content');
+  const isExpanded = section.classList.contains('expanded');
+  
+  // Close all sections first
+  document.querySelectorAll('.detail-section').forEach(s => {
+    if (s !== section) {
+      s.classList.remove('expanded');
+      s.querySelector('.section-content').style.display = 'none';
+    }
+  });
+  
+  // Toggle clicked section
+  if (isExpanded) {
+    section.classList.remove('expanded');
+    content.style.display = 'none';
+  } else {
+    section.classList.add('expanded');
+    content.style.display = 'block';
+  }
+}
+
+// Optional: Expand first section by default
+document.addEventListener('DOMContentLoaded', function() {
+  const firstSection = document.querySelector('.detail-section');
+  if (firstSection) {
+    firstSection.classList.add('expanded');
+    firstSection.querySelector('.section-content').style.display = 'block';
+  }
+});
+</script>
+
+<%- include('partials/footer') %> 

@@ -1,0 +1,176 @@
+<%- include('partials/header') %>
+
+<!-- Add loading overlay -->
+<div id="loadingOverlay" class="loading-overlay" style="display: flex;">
+  <div class="loading-content">
+    <div class="key-animation">
+      <div class="key">
+        <div class="key-head"></div>
+        <div class="key-shaft"></div>
+        <div class="key-teeth">
+          <div class="tooth"></div>
+          <div class="tooth"></div>
+          <div class="tooth"></div>
+        </div>
+      </div>
+      <div class="keyhole">
+        <div class="keyhole-top"></div>
+        <div class="keyhole-bottom"></div>
+      </div>
+    </div>
+    <h2 class="loading-text">Loading Reports</h2>
+    <div class="loading-progress">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <p id="progressText" class="loading-subtext">Fetching claim data...</p>
+    </div>
+  </div>
+</div>
+
+<div id="reportsContent" class="container" style="display: none;">
+  <div class="reports-page">
+    <h1><i class="fas fa-chart-bar"></i> Reports</h1>
+    
+    <div class="report-filters card">
+      <h2>Generate Report</h2>
+      <form id="reportForm" class="report-form">
+        <div class="form-group">
+          <label for="reportType">Report Type</label>
+          <select name="reportType" id="reportType" class="form-control" required>
+            <option value="financial">Financial Summary</option>
+            <option value="status">Status Summary</option>
+            <option value="salesman">Salesman Performance</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select name="status" id="status" class="form-control">
+            <option value="all">All Statuses</option>
+            <% statuses.forEach(status => { %>
+              <option value="<%= status %>"><%= status %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="salesman">Salesman</label>
+          <select name="salesman" id="salesman" class="form-control">
+            <option value="all">All Salesmen</option>
+            <% salesmen.forEach(name => { %>
+              <option value="<%= name %>"><%= name %></option>
+            <% }); %>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-sync"></i> Generate Report
+        </button>
+      </form>
+    </div>
+
+    <div id="reportResults" class="report-results card" style="display: none;">
+      <h2>Report Results</h2>
+      <div class="results-content">
+        <!-- Results will be populated here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show loading overlay immediately
+document.addEventListener('DOMContentLoaded', function() {
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const reportsContent = document.getElementById('reportsContent');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+
+  // Start with loading overlay visible and content hidden
+  loadingOverlay.style.display = 'flex';
+  reportsContent.style.display = 'none';
+
+  // Simulate progress while data is loading
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    if (progress < 90) {  // Only go up to 90% until content is actually loaded
+      progress += 10;
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = `Loading claims data... ${progress}%`;
+    }
+  }, 200);
+
+  // When the window is fully loaded (including all content)
+  window.addEventListener('load', function() {
+    clearInterval(progressInterval);
+    progressFill.style.width = '100%';
+    progressText.textContent = 'Complete!';
+    
+    // Short delay before showing content
+    setTimeout(() => {
+      loadingOverlay.style.display = 'none';
+      reportsContent.style.display = 'block';
+    }, 500);
+  });
+});
+
+// Rest of your existing script
+</script>
+
+<style>
+.reports-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.report-filters {
+  margin-bottom: 2rem;
+}
+
+.report-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-item {
+  background: var(--card-bg);
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.summary-item h3 {
+  color: var(--primary-color);
+  margin-bottom: 0.5rem;
+}
+
+.summary-item p {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--secondary-color);
+}
+
+.claims-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.claim-item {
+  background: var(--card-bg);
+  padding: 1rem;
+  border-radius: var(--border-radius);
+}
+</style>
+
+<%- include('partials/footer') %> 

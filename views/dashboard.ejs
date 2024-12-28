@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KeyAdjusting Portal - Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-content">
+      <div class="navbar-left">
+        <h1 class="portal-title">Key Adjusting <span>Contractor Portal</span></h1>
+        <div class="user-nav-info">
+          <span class="nav-info-item"><i class="fas fa-id-badge"></i> <%= user.contractorId %></span>
+          <span class="nav-info-item"><i class="fas fa-user"></i> <%= user.name %></span>
+        </div>
+      </div>
+      <div class="nav-links">
+        <a href="/auth/logout" class="btn btn-outline">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Add loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+      <div class="key-animation">
+        <div class="key">
+          <div class="key-head"></div>
+          <div class="key-shaft"></div>
+          <div class="key-teeth">
+            <div class="tooth"></div>
+            <div class="tooth"></div>
+            <div class="tooth"></div>
+          </div>
+        </div>
+        <div class="keyhole">
+          <div class="keyhole-top"></div>
+          <div class="keyhole-bottom"></div>
+        </div>
+      </div>
+      <h2 class="loading-text">Unlocking Your Dashboard</h2>
+      <div class="loading-progress">
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <p id="progressText" class="loading-subtext">Loading claims... 0%</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboardContent" class="container" style="display: none;">
+    <!-- Statistics Section -->
+    <div class="stats-section">
+      <h3><i class="fas fa-chart-pie"></i> Claims Overview</h3>
+      <div class="stats-grid">
+        <% 
+          // Create a dynamic status count object
+          const statusCounts = {};
+          claims.forEach(claim => {
+            const status = claim.status.status.toLowerCase();
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+          });
+          const totalClaims = claims.length;
+        %>
+        
+        <% Object.entries(statusCounts).forEach(([status, count]) => { %>
+          <div class="stat-card <%= status.toLowerCase() %>">
+            <span class="stat-number"><%= count %></span>
+            <span class="stat-label"><%= status.charAt(0).toUpperCase() + status.slice(1) %></span>
+          </div>
+        <% }); %>
+        
+        <div class="stat-card total">
+          <span class="stat-number"><%= totalClaims %></span>
+          <span class="stat-label">Total Claims</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-header">
+      <h1>Welcome, <%= user.name %></h1>
+      <div class="dashboard-actions">
+        <a href="/reports" class="btn btn-primary">
+          <i class="fas fa-chart-bar"></i> Reports
+        </a>
+        <button onclick="refreshClaims()" class="btn btn-secondary">
+          <i class="fas fa-sync-alt"></i> Refresh Claims
+        </button>
+      </div>
+    </div>
+
+    <div class="progress-bar-container" style="display: none;">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="progress-text">Loading claims...</div>
+    </div>
+
+    <div class="claims-container">
+      <div class="claims-header">
+        <h2>Claims Overview</h2>
+        <div class="claims-filters">
+          <select class="status-filter" id="statusFilter">
+            <option value="all">All Status</option>
+            <% statuses.forEach(status => { %>
+              <option value="<%= status.toLowerCase() %>"><%= status %></option>
+            <% }); %>
+          </select>
+        </div>
+      </div>
+      
+      <div class="claims-grid">
+        <% claims.forEach(claim => { %>
+          <a href="/claims/<%= claim.id %>" class="claim-card">
+            <div class="claim-status-indicator" style="background-color: <%= claim.status.color %>"></div>
+            <div class="claim-card-content">
+              <h3 class="claim-name"><%= claim.name %></h3>
+              <span class="claim-status" style="background-color: <%= claim.status.color %>">
+                <%= claim.status.status.toUpperCase() %>
+              </span>
+              <div class="claim-meta">
+                <span class="claim-id">ID: <%= claim.id %></span>
+              </div>
+            </div>
+          </a>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="account-section">
+      <button onclick="confirmDelete()" class="btn btn-danger">
+        <i class="fas fa-user-times"></i> Delete My Account
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const loadingOverlay = document.querySelector('#loadingOverlay');
+      const dashboardContent = document.querySelector('#dashboardContent');
+      const progressFill = document.querySelector('#progressFill');
+      const progressText = document.querySelector('#progressText');
+      
+      loadClaims();
+
+      async function loadClaims() {
+        try {
+          // Show loading overlay
+          loadingOverlay.style.display = 'flex';
+          dashboardContent.style.display = 'none';
+          
+          // Start progress animation
+          progressFill.style.width = '50%';
+          progressText.textContent = 'Loading your claims...';
+          
+          const response = await fetch('/dashboard/claims');
+          if (!response.ok) throw new Error('Failed to fetch claims');
+          const claims = await response.json();
+          
+          // Complete progress animation
+          progressFill.style.width = '100%';
+          progressText.textContent = `Found ${claims.length} claims`;
+          
+          // Short delay to show completion
+          setTimeout(() => {
+            // Hide loading overlay and show dashboard
+            loadingOverlay.style.display = 'none';
+            dashboardContent.style.display = 'block';
+            
+            // Update claims list
+            updateClaimsList(claims);
+          }, 500);
+          
+        } catch (error) {
+          console.error('Error loading claims:', error);
+          progressText.textContent = 'Error loading claims. Please refresh the page.';
+          progressFill.style.backgroundColor = '#dc3545';
+        }
+      }
+
+      function updateClaimsList(claims) {
+        const claimsList = document.querySelector('.claims-list');
+        if (!claimsList) return;
+
+        if (!claims.length) {
+          claimsList.innerHTML = '<div class="no-claims">No claims found</div>';
+          return;
+        }
+
+        claimsList.innerHTML = claims.map(claim => `
+          <div class="claim-card" data-claim-id="${claim.claimId}">
+            <div class="claim-header" onclick="toggleClaim(this.parentElement)">
+              <div class="claim-title">
+                <span class="status-dot" style="background-color: ${claim.status.color}"></span>
+                ${claim.name}
+              </div>
+              <div class="claim-status" style="color: ${claim.status.color}">
+                ${claim.status.status.toUpperCase()}
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+            <div class="claim-content" style="display: none;">
+              Click to load details
+            </div>
+          </div>
+        `).join('');
+      }
+
+      async function loadClaimDetails(claimId, contentElement) {
+        contentElement.innerHTML = '<div class="loading">Loading claim details...</div>';
+        
+        try {
+          const response = await fetch(`/dashboard/claims/${claimId}`);
+          if (!response.ok) throw new Error('Failed to fetch claim details');
+          const details = await response.json();
+          
+          contentElement.innerHTML = `
+            <div class="claim-details">
+              <div class="info-group">
+                <strong>Status:</strong> ${details.status.status}
+              </div>
+              ${details.customFields.map(field => `
+                <div class="info-group">
+                  <strong>${field.name}:</strong> ${field.value}
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } catch (error) {
+          contentElement.innerHTML = '<div class="error">Error loading claim details</div>';
+        }
+      }
+
+      window.toggleClaim = function(claimCard) {
+        const content = claimCard.querySelector('.claim-content');
+        const expandIcon = claimCard.querySelector('.expand-icon');
+        const isExpanded = content.style.display !== 'none';
+        
+        expandIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+        content.style.display = isExpanded ? 'none' : 'block';
+        
+        if (!isExpanded && content.innerHTML.includes('Click to load details')) {
+          const claimId = claimCard.dataset.claimId;
+          loadClaimDetails(claimId, content);
+        }
+      };
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const statusFilter = document.getElementById('statusFilter');
+      const claimsGrid = document.querySelector('.claims-grid');
+      const originalClaims = [...claimsGrid.children];
+      
+      statusFilter.addEventListener('change', function() {
+        const selectedStatus = this.value.toLowerCase();
+        
+        // Store original claims if not already stored
+        if (!originalClaims.length) {
+          originalClaims.push(...claimsGrid.children);
+        }
+        
+        // Clear current claims
+        claimsGrid.innerHTML = '';
+        
+        // Filter and append claims
+        originalClaims.forEach(claim => {
+          const claimStatus = claim
+            .querySelector('.claim-status')
+            .textContent.trim()
+            .toLowerCase();
+            
+          if (selectedStatus === 'all' || claimStatus === selectedStatus) {
+            claimsGrid.appendChild(claim.cloneNode(true));
+          }
+        });
+        
+        // Show "no claims" message if needed
+        if (claimsGrid.children.length === 0) {
+          const noClaimsMsg = document.createElement('div');
+          noClaimsMsg.className = 'no-claims-message';
+          noClaimsMsg.textContent = `No claims found with status: ${selectedStatus}`;
+          claimsGrid.appendChild(noClaimsMsg);
+        }
+      });
+    });
+  </script>
+
+  <style>
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .progress-bar-container {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .progress-bar {
+      height: 20px;
+      background: #eee;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-color);
+      width: 0;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      margin-top: 0.5rem;
+      color: #666;
+    }
+
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .progress-text {
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+      color: var(--primary-color);
+    }
+
+    .progress-bar {
+      width: 300px;
+      height: 4px;
+      background: #eee;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-color);
+      width: 0;
+      transition: width 0.3s ease;
+    }
+
+    .no-claims {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+      font-size: 1.1rem;
+    }
+
+    .progress-container {
+      text-align: center;
+      padding: 2rem;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      margin: 2rem auto;
+      max-width: 600px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--accent-blue);
+      border-radius: 3px;
+      width: 0;
+      transition: width 0.3s ease;
+      margin: 1rem 0;
+    }
+
+    .progress-text {
+      color: var(--text-color);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .claims-filters {
+      margin-left: auto;
+    }
+    
+    .status-filter {
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--primary-light);
+      border-radius: var(--border-radius);
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .status-filter:hover {
+      border-color: var(--primary-color);
+    }
+    
+    .status-filter:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    }
+    
+    .no-claims-message {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2rem;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      color: var(--text-color);
+      font-size: 1.1rem;
+    }
+  </style>
+</body>
+</html> 
