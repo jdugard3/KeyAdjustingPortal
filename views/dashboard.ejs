@@ -102,6 +102,10 @@
       <div class="claims-header">
         <h2>Claims Overview</h2>
         <div class="claims-filters">
+          <div class="search-container">
+            <input type="text" id="claimSearch" class="search-input" placeholder="Search claims...">
+            <i class="fas fa-search search-icon"></i>
+          </div>
           <select class="status-filter" id="statusFilter">
             <option value="all">All Status</option>
             <% statuses.forEach(status => { %>
@@ -147,6 +151,49 @@
       
       loadClaims();
 
+      // Add search functionality
+      const searchInput = document.getElementById('claimSearch');
+      
+      searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        
+        // If search is empty, reset to current status filter
+        if (!searchTerm) {
+          // Get current status filter
+          const currentStatus = statusFilter.value.toLowerCase();
+          filterClaimsByStatus(currentStatus);
+          return;
+        }
+        
+        // Get current filtered claims (respecting status filter)
+        const currentStatus = statusFilter.value.toLowerCase();
+        
+        // Clear current claims
+        claimsList.innerHTML = '';
+        
+        // Filter by search term and current status
+        let matchedClaims = 0;
+        originalClaims.forEach(claim => {
+          const claimName = claim.querySelector('.claim-name').textContent.toLowerCase();
+          const claimStatus = claim.querySelector('.claim-status').textContent.trim().toLowerCase();
+          const claimId = claim.querySelector('.claim-id')?.textContent.toLowerCase() || '';
+          
+          if ((currentStatus === 'all' || claimStatus === currentStatus) && 
+              (claimName.includes(searchTerm) || claimId.includes(searchTerm))) {
+            claimsList.appendChild(claim.cloneNode(true));
+            matchedClaims++;
+          }
+        });
+        
+        // Show "no claims" message if needed
+        if (matchedClaims === 0) {
+          const noClaimsMsg = document.createElement('div');
+          noClaimsMsg.className = 'no-claims-message';
+          noClaimsMsg.textContent = `No claims found matching "${searchTerm}"`;
+          claimsList.appendChild(noClaimsMsg);
+        }
+      });
+      
       // Unified filter function that works for both dropdown and stat cards
       window.filterClaimsByStatus = function(selectedStatus) {
         // Check if the selected status is already active (toggle functionality)
@@ -199,6 +246,31 @@
           const activeCard = document.querySelector(`.stat-card.${selectedStatus}`);
           if (activeCard) {
             activeCard.classList.add('active');
+          }
+        }
+        
+        // After filtering by status, also apply search filter if there's a search term
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        if (searchTerm) {
+          const visibleClaims = Array.from(claimsList.querySelectorAll('.claim-list-item'));
+          claimsList.innerHTML = '';
+          
+          let matchedClaims = 0;
+          visibleClaims.forEach(claim => {
+            const claimName = claim.querySelector('.claim-name').textContent.toLowerCase();
+            const claimId = claim.querySelector('.claim-id').textContent.toLowerCase();
+            
+            if (claimName.includes(searchTerm) || claimId.includes(searchTerm)) {
+              claimsList.appendChild(claim.cloneNode(true));
+              matchedClaims++;
+            }
+          });
+          
+          if (matchedClaims === 0) {
+            const noClaimsMsg = document.createElement('div');
+            noClaimsMsg.className = 'no-claims-message';
+            noClaimsMsg.textContent = `No claims found matching "${searchTerm}" with status: ${selectedStatus}`;
+            claimsList.appendChild(noClaimsMsg);
           }
         }
       };
@@ -544,6 +616,49 @@
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
       border-top: 8px solid var(--primary-color);
+    }
+
+    /* Search bar styles */
+    .claims-filters {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-left: auto;
+    }
+    
+    .search-container {
+      position: relative;
+      width: 250px;
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 0.5rem 1rem 0.5rem 2.5rem;
+      border: 1px solid var(--primary-light);
+      border-radius: var(--border-radius);
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-family: 'Poppins', sans-serif;
+      transition: var(--transition);
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    }
+    
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary-light);
+      pointer-events: none;
+    }
+    
+    .search-input:focus + .search-icon {
+      color: var(--primary-color);
     }
   </style>
 </body>

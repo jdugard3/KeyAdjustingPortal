@@ -11,7 +11,7 @@ class ClickUpService {
     this.API_KEY = process.env.CLICKUP_API_KEY;
     this.API_URL = 'https://api.clickup.com/api/v2';
     this.TEAM_ID = process.env.CLICKUP_TEAM_ID;
-    this.CLAIMS_FIELD_ID = process.env.CLICKUP_CLAIMS_FIELD_ID || 'e94a7e2a-4113-4bde-a6ff-ed034bfb3c98';
+    this.CLAIMS_FIELD_ID = 'e94a7e2a-4113-4bde-a6ff-ed034bfb3c98';
 
     this.api = axios.create({
       baseURL: this.API_URL,
