@@ -66,13 +66,13 @@
         %>
         
         <% Object.entries(statusCounts).forEach(([status, count]) => { %>
-          <div class="stat-card <%= status.toLowerCase() %>">
+          <div class="stat-card <%= status.toLowerCase() %>" onclick="filterClaimsByStatus('<%= status.toLowerCase() %>')">
             <span class="stat-number"><%= count %></span>
             <span class="stat-label"><%= status.charAt(0).toUpperCase() + status.slice(1) %></span>
           </div>
         <% }); %>
         
-        <div class="stat-card total">
+        <div class="stat-card total" onclick="filterClaimsByStatus('all')">
           <span class="stat-number"><%= totalClaims %></span>
           <span class="stat-label">Total Claims</span>
         </div>
@@ -111,19 +111,16 @@
         </div>
       </div>
       
-      <div class="claims-grid">
+      <!-- Replace the grid with a list view -->
+      <div class="claims-list-view">
         <% claims.forEach(claim => { %>
-          <a href="/claims/<%= claim.id %>" class="claim-card">
+          <a href="/claims/<%= claim.id %>" class="claim-list-item">
             <div class="claim-status-indicator" style="background-color: <%= claim.status.color %>"></div>
-            <div class="claim-card-content">
-              <h3 class="claim-name"><%= claim.name %></h3>
-              <span class="claim-status" style="background-color: <%= claim.status.color %>">
-                <%= claim.status.status.toUpperCase() %>
-              </span>
-              <div class="claim-meta">
-                <span class="claim-id">ID: <%= claim.id %></span>
-              </div>
+            <div class="claim-name"><%= claim.name %></div>
+            <div class="claim-status" style="background-color: <%= claim.status.color %>">
+              <%= claim.status.status.toUpperCase() %>
             </div>
+            <div class="claim-id">ID: <%= claim.id %></div>
           </a>
         <% }); %>
       </div>
@@ -142,8 +139,74 @@
       const dashboardContent = document.querySelector('#dashboardContent');
       const progressFill = document.querySelector('#progressFill');
       const progressText = document.querySelector('#progressText');
+      const statusFilter = document.getElementById('statusFilter');
+      const claimsList = document.querySelector('.claims-list-view');
+      
+      // Store all original claims once on page load
+      const originalClaims = Array.from(claimsList.querySelectorAll('.claim-list-item'));
       
       loadClaims();
+
+      // Unified filter function that works for both dropdown and stat cards
+      window.filterClaimsByStatus = function(selectedStatus) {
+        // Check if the selected status is already active (toggle functionality)
+        const activeCard = document.querySelector('.stat-card.active');
+        const isAlreadySelected = activeCard && 
+          ((selectedStatus === 'all' && activeCard.classList.contains('total')) || 
+           activeCard.classList.contains(selectedStatus));
+        
+        // If already selected, reset to show all claims
+        if (isAlreadySelected) {
+          selectedStatus = 'all';
+        }
+        
+        // Update the dropdown to match the selected status
+        statusFilter.value = selectedStatus;
+        
+        // Clear current claims
+        claimsList.innerHTML = '';
+        
+        // Filter and append claims
+        let matchedClaims = 0;
+        originalClaims.forEach(claim => {
+          const claimStatus = claim
+            .querySelector('.claim-status')
+            .textContent.trim()
+            .toLowerCase();
+            
+          if (selectedStatus === 'all' || claimStatus === selectedStatus) {
+            claimsList.appendChild(claim.cloneNode(true));
+            matchedClaims++;
+          }
+        });
+        
+        // Show "no claims" message if needed
+        if (matchedClaims === 0) {
+          const noClaimsMsg = document.createElement('div');
+          noClaimsMsg.className = 'no-claims-message';
+          noClaimsMsg.textContent = `No claims found with status: ${selectedStatus}`;
+          claimsList.appendChild(noClaimsMsg);
+        }
+        
+        // Highlight the active stat card
+        document.querySelectorAll('.stat-card').forEach(card => {
+          card.classList.remove('active');
+        });
+        
+        if (selectedStatus === 'all') {
+          document.querySelector('.stat-card.total').classList.add('active');
+        } else {
+          const activeCard = document.querySelector(`.stat-card.${selectedStatus}`);
+          if (activeCard) {
+            activeCard.classList.add('active');
+          }
+        }
+      };
+      
+      // Connect the dropdown change event to our filter function
+      statusFilter.addEventListener('change', function() {
+        filterClaimsByStatus(this.value.toLowerCase());
+      });
 
       async function loadClaims() {
         try {
@@ -246,46 +309,6 @@
           loadClaimDetails(claimId, content);
         }
       };
-    });
-  </script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const statusFilter = document.getElementById('statusFilter');
-      const claimsGrid = document.querySelector('.claims-grid');
-      const originalClaims = [...claimsGrid.children];
-      
-      statusFilter.addEventListener('change', function() {
-        const selectedStatus = this.value.toLowerCase();
-        
-        // Store original claims if not already stored
-        if (!originalClaims.length) {
-          originalClaims.push(...claimsGrid.children);
-        }
-        
-        // Clear current claims
-        claimsGrid.innerHTML = '';
-        
-        // Filter and append claims
-        originalClaims.forEach(claim => {
-          const claimStatus = claim
-            .querySelector('.claim-status')
-            .textContent.trim()
-            .toLowerCase();
-            
-          if (selectedStatus === 'all' || claimStatus === selectedStatus) {
-            claimsGrid.appendChild(claim.cloneNode(true));
-          }
-        });
-        
-        // Show "no claims" message if needed
-        if (claimsGrid.children.length === 0) {
-          const noClaimsMsg = document.createElement('div');
-          noClaimsMsg.className = 'no-claims-message';
-          noClaimsMsg.textContent = `No claims found with status: ${selectedStatus}`;
-          claimsGrid.appendChild(noClaimsMsg);
-        }
-      });
     });
   </script>
 
@@ -425,13 +448,102 @@
     }
     
     .no-claims-message {
-      grid-column: 1 / -1;
       text-align: center;
       padding: 2rem;
       background: var(--card-bg);
       border-radius: var(--border-radius);
       color: var(--text-color);
       font-size: 1.1rem;
+    }
+
+    /* List View Styles */
+    .claims-list-view {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .claim-list-item {
+      display: grid;
+      grid-template-columns: 4px 1fr auto auto;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      text-decoration: none;
+      color: var(--text-color);
+      transition: var(--transition);
+    }
+
+    .claim-list-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 53, 81, 0.1);
+    }
+
+    .claim-list-item .claim-status-indicator {
+      height: 100%;
+      width: 4px;
+      border-radius: 2px;
+      grid-row: 1;
+      grid-column: 1;
+    }
+
+    .claim-list-item .claim-name {
+      font-weight: 500;
+      grid-column: 2;
+    }
+
+    .claim-list-item .claim-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: white;
+      grid-column: 3;
+    }
+
+    .claim-list-item .claim-id {
+      font-size: 0.8rem;
+      color: #666;
+      grid-column: 4;
+    }
+
+    /* Make stat cards look clickable */
+    .stat-card {
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(37, 53, 81, 0.15);
+    }
+    
+    .stat-card:active {
+      transform: translateY(-1px);
+    }
+    
+    /* Style for active stat card */
+    .stat-card.active {
+      border: 2px solid var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+    }
+    
+    .stat-card.active::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid var(--primary-color);
     }
   </style>
 </body>
