@@ -223,6 +223,66 @@
           <% } %>
         </div>
       </div>
+
+      <!-- Group 7: Comments & Activity -->
+      <div class="detail-section collapsible">
+        <div class="section-header" onclick="toggleSection(this)">
+          <h3><i class="fas fa-comments"></i> Comments & Activity</h3>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="section-content" style="display: none;">
+          <!-- Comments List -->
+          <div class="comments-section">
+            <h4>Recent Activity</h4>
+            <div class="comments-list" id="comments-list">
+              <% if (claim.comments && claim.comments.length > 0) { %>
+                <% claim.comments.forEach(comment => { %>
+                  <div class="comment-item">
+                    <div class="comment-header">
+                      <span class="comment-author"><%= comment.user ? comment.user.username : 'User' %></span>
+                      <span class="comment-date"><%= new Date(parseInt(comment.date)).toLocaleString() %></span>
+                    </div>
+                    <div class="comment-body">
+                      <%= comment.comment_text || (comment.comment && comment.comment[0] && comment.comment[0].text) || 'No text' %>
+                    </div>
+                  </div>
+                <% }); %>
+              <% } else { %>
+                <div class="no-comments-message">
+                  No comments yet.
+                </div>
+              <% } %>
+            </div>
+          </div>
+          
+          <!-- Add Comment Form -->
+          <div class="add-comment-section">
+            <h4>Add Comment</h4>
+            <form id="comment-form" class="comment-form">
+              <div class="form-group">
+                <textarea 
+                  name="comment_text" 
+                  id="comment_text" 
+                  class="form-control" 
+                  rows="3" 
+                  placeholder="Type your comment here..."
+                  required
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <div class="form-check">
+                  <input type="checkbox" class="form-check-input" id="notify_all" name="notify_all" checked>
+                  <label class="form-check-label" for="notify_all">Notify all team members</label>
+                </div>
+              </div>
+              <input type="hidden" name="claimId" value="<%= claim.id %>">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Post Comment
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -312,6 +372,71 @@
 .detail-section:not(:last-child) {
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
+
+/* Comments styles */
+.comments-section {
+  margin-bottom: 2rem;
+}
+
+.comments-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1rem;
+  background-color: #f9f9f9;
+}
+
+.comment-item {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 1rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.comment-item:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.comment-author {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.comment-date {
+  color: #777;
+}
+
+.comment-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.add-comment-section {
+  margin-top: 1rem;
+}
+
+.comment-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.no-comments-message {
+  padding: 1rem;
+  color: #777;
+  text-align: center;
+  font-style: italic;
+}
 </style>
 
 <script>
@@ -380,6 +505,77 @@ document.addEventListener('DOMContentLoaded', function() {
   if (firstSection) {
     firstSection.classList.add('expanded');
     firstSection.querySelector('.section-content').style.display = 'block';
+  }
+});
+
+// Comment form submission
+document.getElementById('comment-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const commentText = document.getElementById('comment_text').value;
+  const notifyAll = document.getElementById('notify_all').checked;
+  const claimId = this.elements.claimId.value;
+  
+  if (!commentText.trim()) {
+    alert('Please enter a comment');
+    return;
+  }
+  
+  // Disable the submit button and show loading state
+  const submitBtn = this.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+  
+  try {
+    const response = await fetch(`/claims/${claimId}/comment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        comment_text: commentText,
+        notify_all: notifyAll
+      })
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(responseData.error || 'Failed to post comment');
+    }
+    
+    // Add the new comment to the list
+    const commentsList = document.getElementById('comments-list');
+    const noCommentsMsg = commentsList.querySelector('.no-comments-message');
+    if (noCommentsMsg) {
+      noCommentsMsg.remove();
+    }
+    
+    const newComment = document.createElement('div');
+    newComment.className = 'comment-item';
+    newComment.innerHTML = `
+      <div class="comment-header">
+        <span class="comment-author">${responseData.user?.username || 'You'}</span>
+        <span class="comment-date">${new Date().toLocaleString()}</span>
+      </div>
+      <div class="comment-body">
+        ${responseData.comment_text || commentText}
+      </div>
+    `;
+    
+    commentsList.insertBefore(newComment, commentsList.firstChild);
+    
+    // Clear the form
+    document.getElementById('comment_text').value = '';
+    
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    alert(`Failed to post comment: ${error.message}`);
+  } finally {
+    // Re-enable the submit button
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalBtnText;
   }
 });
 </script>

@@ -42,6 +42,10 @@ router.get('/:claimId', isAuthenticated, async (req, res) => {
       });
     }
 
+    // Get comments for this claim
+    const comments = await clickupService.getTaskComments(claimId);
+    console.log(`Retrieved ${comments.length} comments for claim ${claimId}`);
+
     // Format the claim data and exclude sensitive fields
     const claimDetails = {
       id: taskResponse.id,
@@ -139,7 +143,8 @@ router.get('/:claimId', isAuthenticated, async (req, res) => {
             type: field.type
           };
         }),
-      attachments: taskResponse.attachments || []
+      attachments: taskResponse.attachments || [],
+      comments: comments.slice(0, 5) // Get only the 5 most recent comments
     };
 
     console.log('Rendering claim template with details');
@@ -154,6 +159,40 @@ router.get('/:claimId', isAuthenticated, async (req, res) => {
       message: 'Error loading claim details',
       error: error.message 
     });
+  }
+});
+
+// Get task comments
+router.get('/:claimId/comments', isAuthenticated, async (req, res) => {
+  try {
+    const claimId = req.params.claimId;
+    const comments = await clickupService.getTaskComments(claimId);
+    res.json(comments);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+// Add a comment to a task
+router.post('/:claimId/comment', isAuthenticated, async (req, res) => {
+  try {
+    const claimId = req.params.claimId;
+    const { comment_text, notify_all } = req.body;
+    
+    if (!comment_text) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
+    
+    const result = await clickupService.addTaskComment(claimId, {
+      comment_text,
+      notify_all: notify_all !== false
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 

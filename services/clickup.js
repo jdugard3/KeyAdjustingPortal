@@ -87,7 +87,10 @@ class ClickUpService {
   async getClaimDetails(claimId) {
     try {
       const claimDetails = await this.getTask(claimId);
+      const comments = await this.getTaskComments(claimId);
+      
       return {
+        id: claimDetails.id,
         claimId: claimDetails.id,
         name: claimDetails.name,
         status: claimDetails.status,
@@ -100,7 +103,8 @@ class ClickUpService {
             value: field.value
           })),
         attachments: claimDetails.attachments || [],
-        description: claimDetails.description || ''
+        description: claimDetails.description || '',
+        comments: comments.slice(0, 5) // Get only the 5 most recent comments
       };
     } catch (error) {
       console.error(`Error fetching claim details for ${claimId}:`, error);
@@ -143,6 +147,65 @@ class ClickUpService {
   // Get contractor info (now just uses getTask)
   async getContractorInfo(contractorId) {
     return this.getTask(contractorId);
+  }
+
+  // Get comments for a task
+  async getTaskComments(taskId) {
+    try {
+      console.log(`Fetching comments for task ${taskId}`);
+      const response = await this.api.get(
+        `/task/${taskId}/comment?custom_task_ids=true&team_id=${this.TEAM_ID}`
+      );
+      
+      // Log the response structure to debug
+      console.log('Comments response structure:', JSON.stringify(response.data, null, 2).substring(0, 500) + '...');
+      
+      return response.data.comments || [];
+    } catch (error) {
+      console.error('Error fetching task comments:', error);
+      return []; // Return empty array instead of throwing
+    }
+  }
+
+  // Add a comment to a task and assign it to the Key PA
+  async addTaskComment(taskId, commentData) {
+    try {
+      console.log(`Adding comment to task ${taskId}:`, commentData);
+      
+      // Get the task details to find the Key PA
+      const taskDetails = await this.getTask(taskId);
+      
+      // Find the Key PA field
+      const keyPAField = taskDetails.custom_fields.find(field => 
+        field.name === '🙎‍♂️ Key PA' || field.name === 'Key PA'
+      );
+      
+      // If Key PA exists and has a value, assign the comment to them
+      if (keyPAField && keyPAField.value && keyPAField.value.length > 0) {
+        // For user fields, the value is typically an array of user objects
+        const keyPAUser = keyPAField.value[0];
+        console.log('Found Key PA user:', keyPAUser);
+        
+        // Add the assignee to the comment data
+        if (keyPAUser.id) {
+          commentData.assignee = keyPAUser.id;
+          console.log('Assigning comment to Key PA:', keyPAUser.id);
+        }
+      } else {
+        console.log('No Key PA found for this task or field is empty');
+      }
+      
+      const response = await this.api.post(
+        `/task/${taskId}/comment?custom_task_ids=true&team_id=${this.TEAM_ID}`,
+        commentData
+      );
+      
+      console.log('Comment post response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error) {
+      console.error('Error adding task comment:', error.response?.data || error.message);
+      throw error;
+    }
   }
 }
 
