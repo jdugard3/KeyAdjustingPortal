@@ -52,6 +52,13 @@ router.post('/active-claims-csv', isAuthenticated, async (req, res) => {
       });
     }
     
+    // Add this after fetching the active claim details
+    console.log('Date fields in first claim:');
+    if (activeClaimDetails.length > 0) {
+      console.log('date_created:', activeClaimDetails[0].date_created, 'type:', typeof activeClaimDetails[0].date_created);
+      console.log('date_updated:', activeClaimDetails[0].date_updated, 'type:', typeof activeClaimDetails[0].date_updated);
+    }
+    
     // Helper functions for formatting
     function formatCurrency(val) {
       if (val === null || val === undefined || val === '') return '';
@@ -149,8 +156,34 @@ router.post('/active-claims-csv', isAuthenticated, async (req, res) => {
       { key: '📅 Date Approved', source: 'custom_fields_by_id.797645f1-436f-46bc-89aa-595259651000', formatter: formatDate },
       { key: '🗓️ Claim Filed Date', source: 'custom_fields_by_id.55e8d5dd-0dd9-4250-82e7-5af05decb7b2', formatter: formatDate },
       { key: '🗓️ First Settlement', source: 'custom_fields_by_id.5b8fa077-96e0-4144-851d-688d2d9ea1d8', formatter: formatDate },
-      { key: 'Created Date', source: 'date_created', formatter: (val) => new Date(val).toLocaleDateString() },
-      { key: 'Updated Date', source: 'date_updated', formatter: (val) => new Date(val).toLocaleDateString() },
+      { key: 'Created Date', source: 'date_created', formatter: (val) => {
+        if (!val) return '';
+        try {
+          // Handle milliseconds timestamp
+          if (typeof val === 'number') {
+            return new Date(val).toLocaleDateString();
+          }
+          // Handle ISO string format
+          return new Date(val).toLocaleDateString();
+        } catch (e) {
+          console.log('Error formatting Created Date:', val, e);
+          return val || '';
+        }
+      }},
+      { key: 'Updated Date', source: 'date_updated', formatter: (val) => {
+        if (!val) return '';
+        try {
+          // Handle milliseconds timestamp
+          if (typeof val === 'number') {
+            return new Date(val).toLocaleDateString();
+          }
+          // Handle ISO string format
+          return new Date(val).toLocaleDateString();
+        } catch (e) {
+          console.log('Error formatting Updated Date:', val, e);
+          return val || '';
+        }
+      }},
       
       // Financial information
       { key: '💰 ACV', source: 'custom_fields_by_id.f8c23071-bbe2-42d9-be1b-68c36bba8299', formatter: formatCurrency },
