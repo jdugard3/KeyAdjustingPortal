@@ -36,28 +36,6 @@
         </div>
       </div>
 
-      <!-- Group 2: Financial Information -->
-      <div class="detail-section collapsible">
-        <div class="section-header" onclick="toggleSection(this)">
-          <h3><i class="fas fa-dollar-sign"></i> Financial Details</h3>
-          <i class="fas fa-chevron-down toggle-icon"></i>
-        </div>
-        <div class="section-content" style="display: none;">
-          <% 
-          const financialFields = claim.customFields.filter(field => 
-            ['RCV', 'ACV', 'Deductible', 'Depreciation'].includes(field.name)
-          );
-          financialFields.forEach(field => { %>
-            <div class="info-item">
-              <label><%= field.name %></label>
-              <span><%= typeof field.value === 'number' ? 
-                field.value.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : 
-                field.value %></span>
-            </div>
-          <% }); %>
-        </div>
-      </div>
-
       <!-- Group 3: Location Information -->
       <div class="detail-section collapsible">
         <div class="section-header" onclick="toggleSection(this)">
@@ -161,7 +139,7 @@
       <!-- Group 6: Additional Information -->
       <div class="detail-section collapsible">
         <div class="section-header" onclick="toggleSection(this)">
-          <h3><i class="fas fa-plus-circle"></i> Additional Information</h3>
+          <h3><i class="fas fa-info-circle"></i> Additional Information</h3>
           <i class="fas fa-chevron-down toggle-icon"></i>
         </div>
         <div class="section-content" style="display: none;">
