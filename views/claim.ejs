@@ -4,9 +4,14 @@
   <div class="claim-detail">
     <div class="claim-detail-header">
       <div class="header-top">
-        <a href="/dashboard" class="btn btn-link">
-          <i class="fas fa-arrow-left"></i> Back to Claims
-        </a>
+        <div class="navigation-buttons">
+          <a href="/dashboard" class="btn btn-link">
+            <i class="fas fa-arrow-left"></i> Back to Claims
+          </a>
+          <a href="/dashboard" class="btn btn-home">
+            <i class="fas fa-home"></i> Home
+          </a>
+        </div>
         <div class="claim-status-badge" style="background-color: <%= claim.status.color || '#999999' %>">
           <%= (claim.status.status || 'Unknown').toUpperCase() %>
         </div>
