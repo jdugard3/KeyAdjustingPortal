@@ -34,11 +34,17 @@
     
     <div class="report-actions card">
       <h2>Generate Reports</h2>
-      <p>Generate a comprehensive CSV report of all your active claims with detailed information.</p>
+      <p>Generate comprehensive reports of all your active claims with detailed information.</p>
       
-      <button id="generateActiveClaimsReport" class="btn btn-primary btn-lg">
-        <i class="fas fa-file-csv"></i> Create Active Claims Report
-      </button>
+      <div class="report-buttons">
+        <button id="generateActiveClaimsCSV" class="btn btn-primary btn-lg">
+          <i class="fas fa-file-csv"></i> Download CSV Report
+        </button>
+        
+        <button id="generateActiveClaimsPDF" class="btn btn-secondary btn-lg">
+          <i class="fas fa-file-pdf"></i> Download PDF Report
+        </button>
+      </div>
       
       <div id="reportStatus" class="report-status" style="display: none;">
         <div class="spinner">
@@ -57,7 +63,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const reportsContent = document.getElementById('reportsContent');
   const progressFill = document.getElementById('progressFill');
   const progressText = document.getElementById('progressText');
-  const generateBtn = document.getElementById('generateActiveClaimsReport');
+  const generateCSVBtn = document.getElementById('generateActiveClaimsCSV');
+  const generatePDFBtn = document.getElementById('generateActiveClaimsPDF');
   const reportStatus = document.getElementById('reportStatus');
   const statusText = document.getElementById('statusText');
 
@@ -73,37 +80,49 @@ document.addEventListener('DOMContentLoaded', function() {
       progressFill.style.width = `${progress}%`;
       progressText.textContent = `Loading claims data... ${progress}%`;
     }
-  }, 200);
+  }, 300);
 
-  // When the window is fully loaded (including all content)
-  window.addEventListener('load', function() {
+  // Simulate completed loading after a short delay
+  setTimeout(() => {
     clearInterval(progressInterval);
+    progress = 100;
     progressFill.style.width = '100%';
-    progressText.textContent = 'Complete!';
+    progressText.textContent = 'Ready!';
     
-    // Short delay before showing content
+    // Hide loading overlay and show content
     setTimeout(() => {
       loadingOverlay.style.display = 'none';
       reportsContent.style.display = 'block';
     }, 500);
+  }, 2000);
+
+  // Handle CSV report generation
+  generateCSVBtn.addEventListener('click', async function() {
+    await generateReport('csv', '/reports/active-claims-csv');
   });
 
-  // Handle report generation
-  generateBtn.addEventListener('click', async function() {
+  // Handle PDF report generation
+  generatePDFBtn.addEventListener('click', async function() {
+    await generateReport('pdf', '/reports/active-claims-pdf');
+  });
+
+  // Generic report generation function
+  async function generateReport(type, endpoint) {
     // Show loading state
-    generateBtn.disabled = true;
+    generateCSVBtn.disabled = true;
+    generatePDFBtn.disabled = true;
     reportStatus.style.display = 'flex';
-    statusText.textContent = 'Generating report...';
+    statusText.textContent = `Generating ${type.toUpperCase()} report...`;
 
     try {
       // Call the API to generate the report
-      const response = await fetch('/reports/active-claims-csv', {
+      const response = await fetch(endpoint, {
         method: 'POST'
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate report');
+        throw new Error(errorData.error || `Failed to generate ${type} report`);
       }
 
       // Get the blob from the response
@@ -114,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `active_claims_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `active_claims_report_${new Date().toISOString().split('T')[0]}.${type}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -123,18 +142,20 @@ document.addEventListener('DOMContentLoaded', function() {
       statusText.textContent = 'Report generated successfully!';
       setTimeout(() => {
         reportStatus.style.display = 'none';
-        generateBtn.disabled = false;
+        generateCSVBtn.disabled = false;
+        generatePDFBtn.disabled = false;
       }, 3000);
       
     } catch (error) {
-      console.error('Error generating report:', error);
+      console.error(`Error generating ${type} report:`, error);
       statusText.textContent = `Error: ${error.message}`;
       setTimeout(() => {
         reportStatus.style.display = 'none';
-        generateBtn.disabled = false;
+        generateCSVBtn.disabled = false;
+        generatePDFBtn.disabled = false;
       }, 5000);
     }
-  });
+  }
 });
 </script>
 
