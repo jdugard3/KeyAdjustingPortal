@@ -85,6 +85,10 @@
         <a href="/reports" class="btn btn-primary">
           <i class="fas fa-chart-bar"></i> Reports
         </a>
+        <a href="#" onclick="window.open('https://keyadjusting.clickup.com/forms/9014342582/f/8cmqwxp-13074/AUWX92XDCXGG820TNE', '_blank'); return false;" class="btn btn-secondary">
+          <i class="fas fa-comment-alt"></i> App Feedback
+          <span class="badge badge-new">NEW</span>
+        </a>
         <button onclick="window.location.reload()" class="btn btn-secondary">
           <i class="fas fa-sync-alt"></i> Refresh Claims
         </button>
@@ -390,6 +394,40 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      line-height: 1;
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: top;
+      border-radius: 10px;
+      margin-left: 0.5rem;
+      position: relative;
+      top: -1px;
+    }
+
+    .badge-new {
+      background-color: #ff5722;
+      color: white;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 5px rgba(255, 87, 34, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 87, 34, 0);
+      }
     }
 
     .progress-bar-container {
