@@ -46,9 +46,12 @@
           <i class="fas fa-file-csv"></i> Download CSV Report
         </button>
         
-        <button id="generateActiveClaimsPDF" class="btn btn-secondary btn-lg">
-          <i class="fas fa-file-pdf"></i> Download PDF Report
-        </button>
+        <div class="btn-container">
+          <button id="generateActiveClaimsPDF" class="btn btn-secondary btn-lg" disabled>
+            <i class="fas fa-file-pdf"></i> Download PDF Report
+          </button>
+          <span class="coming-soon-badge">Coming Soon</span>
+        </div>
       </div>
       
       <div id="reportStatus" class="report-status" style="display: none;">
@@ -107,8 +110,18 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Handle PDF report generation
-  generatePDFBtn.addEventListener('click', async function() {
-    await generateReport('pdf', '/reports/active-claims-pdf');
+  generatePDFBtn.addEventListener('click', async function(event) {
+    event.preventDefault();
+    
+    // Since the button is disabled, show a message when clicked
+    reportStatus.style.display = 'flex';
+    statusText.innerHTML = 'PDF reports are coming soon! <br>We\'re working hard to bring you this feature.';
+    
+    setTimeout(() => {
+      reportStatus.style.display = 'none';
+    }, 3000);
+    
+    return false;
   });
 
   // Generic report generation function
@@ -190,9 +203,56 @@ document.addEventListener('DOMContentLoaded', function() {
   font-size: 1.1rem;
 }
 
+.report-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-container {
+  position: relative;
+  display: inline-block;
+}
+
+.coming-soon-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #f8d62b;
+  color: #333;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  animation: bounce 2s infinite;
+  z-index: 10;
+  transform-origin: center;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
+}
+
 .btn-lg {
   padding: 1rem 2rem;
   font-size: 1.2rem;
+}
+
+/* Style for disabled button */
+.btn-secondary[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+  position: relative;
 }
 
 .report-status {
