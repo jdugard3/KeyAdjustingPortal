@@ -150,7 +150,7 @@ router.get('/:claimId', isAuthenticated, async (req, res) => {
     console.log('Rendering claim template with details');
     res.render('claim', { 
       claim: claimDetails,
-      user: req.session.user,
+      user: req.user,
       getFileIcon: getFileIcon
     });
   } catch (error) {

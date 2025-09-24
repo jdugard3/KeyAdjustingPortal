@@ -11,16 +11,16 @@ const clickupService = new ClickUpService();
 // Get contractor dashboard
 router.get('/', isAuthenticated, async (req, res) => {
   try {
-    console.log('Loading dashboard for user:', req.session.user.email);
+    console.log('Loading dashboard for user:', req.user.email);
     const claims = await clickupService.getContractorClaims(
-      req.session.user.contractorId
+      req.user.contractorId
     );
     
     // Get unique statuses from claims
     const uniqueStatuses = [...new Set(claims.map(claim => claim.status.status))];
     
     res.render('dashboard', {
-      user: req.session.user,
+      user: req.user,
       claims: claims || [],
       statuses: uniqueStatuses
     });
@@ -71,7 +71,7 @@ router.post('/upload/:claimId', upload.single('document'), async (req, res) => {
 router.get('/claims', isAuthenticated, async (req, res) => {
   try {
     const claims = await clickupService.getContractorClaims(
-      req.session.user.contractorId
+      req.user.contractorId
     );
     res.json(claims);
   } catch (error) {

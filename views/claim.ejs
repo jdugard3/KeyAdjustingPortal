@@ -21,20 +21,79 @@
 
     <div class="claim-detail-content">
       <!-- Group 1: Key Information -->
-      <div class="detail-section collapsible">
-        <div class="section-header" onclick="toggleSection(this)">
+      <div class="detail-section">
+        <div class="section-header-fixed">
           <h3><i class="fas fa-info-circle"></i> Key Information</h3>
-          <i class="fas fa-chevron-down toggle-icon"></i>
         </div>
-        <div class="section-content" style="display: none;">
+        <div class="section-content" style="display: block;">
           <div class="info-grid">
-            <% const keyFields = claim.customFields.filter(field => 
-              ['Policy Holder', 'Insurance Carrier', 'Claim Number', 'Date of Loss'].includes(field.name)
+            <% 
+            // Combine original key fields with additional information fields
+            const originalKeyFields = ['Policy Holder', 'Insurance Carrier', 'Claim Number', 'Date of Loss'];
+            
+            // List of field names from Additional Information (with emoji prefixes)
+            const additionalFieldNames = [
+              '📋 Claim Number',
+              'Substage',
+              '✏ ️ Cause of Loss',
+              '💰 ACV',
+              '💰 Deductible',
+              '📋 Policy Number',
+              '🗓 ️ Date Of Loss',
+              '🗓 ️ Date Created',
+              '🗓 ️ Date Closed',
+              '📅 Date Approved',
+              '⭕ PA Email',
+              '💰 Recoverable Depreciation',
+              '💰 Non Rec Depreciation',
+              '💰 PWI',
+              '💰 PPS',
+              '🗓️ Claim Filed Date',
+              '💰RCV',
+              '$ 💰 RCV',
+              '$ 💰RCV',
+              '$  💰 RCV',
+              '💰 RCV'
+            ];
+            
+            // Combine all field names
+            const allKeyFieldNames = [...originalKeyFields, ...additionalFieldNames];
+            
+            const keyFields = claim.customFields.filter(field => 
+              allKeyFieldNames.includes(field.name)
             );
-            keyFields.forEach(field => { %>
+            
+            keyFields.forEach(field => { 
+              let displayValue = field.value;
+              
+              // Format date fields if they contain timestamp values
+              if (field.name.includes('Date') && !isNaN(field.value) && field.value > 1000000000) {
+                try {
+                  const date = new Date(parseInt(field.value));
+                  displayValue = date.toLocaleDateString();
+                } catch (e) {
+                  // Keep original value if date parsing fails
+                }
+              }
+              
+              // Format currency fields
+              if ((field.name.includes('ACV') || field.name.includes('RCV') || 
+                   field.name.includes('Deductible') || field.name.includes('Depreciation') ||
+                   field.name.includes('PWI') || field.name.includes('PPS')) && 
+                  !isNaN(field.value)) {
+                try {
+                  displayValue = parseFloat(field.value).toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'USD'
+                  });
+                } catch (e) {
+                  // Keep original value if formatting fails
+                }
+              }
+            %>
               <div class="info-item">
                 <label><%= field.name %></label>
-                <span><%= field.value %></span>
+                <span><%= displayValue %></span>
               </div>
             <% }); %>
           </div>
@@ -141,93 +200,7 @@
         </div>
       </div>
 
-      <!-- Group 6: Additional Information -->
-      <div class="detail-section collapsible">
-        <div class="section-header" onclick="toggleSection(this)">
-          <h3><i class="fas fa-info-circle"></i> Additional Information</h3>
-          <i class="fas fa-chevron-down toggle-icon"></i>
-        </div>
-        <div class="section-content" style="display: none;">
-          <% 
-          // List of field names that should be displayed (with emoji prefixes)
-          const allowedFieldNames = [
-            '📋 Claim Number',
-            'Substage',
-            '✏ ️ Cause of Loss',
-            '💰 ACV',
-            '💰 Deductible',
-            '📋 Policy Number',
-            '🗓 ️ Date Of Loss',
-            '🗓 ️ Date Created',
-            '🗓 ️ Date Closed',
-            '📅 Date Approved',
-            '⭕ PA Email',
-            '💰 Recoverable Depreciation',
-            '💰 Non Rec Depreciation',
-            '💰 PWI',
-            '💰 PPS',
-            '🗓️ Claim Filed Date',
-            '💰RCV'  // No space between emoji and RCV
-          ];
-          
-          // Add additional variations of field names that might exist
-          const additionalVariations = [
-            '$ 💰 RCV',
-            '$ 💰RCV',
-            '$  💰 RCV',
-            '💰 RCV'  // With space between emoji and RCV
-          ];
-          
-          const allAllowedNames = [...allowedFieldNames, ...additionalVariations];
-          
-          // Filter custom fields to only show those with names in the allowed list
-          const additionalFields = claim.customFields.filter(field => 
-            allAllowedNames.includes(field.name)
-          );
-          
-          if (additionalFields.length > 0) { %>
-            <div class="info-grid">
-              <% additionalFields.forEach(field => { 
-                let displayValue = field.value;
-                
-                // Format date fields if they contain timestamp values
-                if (field.name.includes('Date') && !isNaN(field.value) && field.value > 1000000000) {
-                  try {
-                    const date = new Date(parseInt(field.value));
-                    displayValue = date.toLocaleDateString();
-                  } catch (e) {
-                    // Keep original value if date parsing fails
-                  }
-                }
-                
-                // Format currency fields
-                if ((field.name.includes('ACV') || field.name.includes('RCV') || 
-                     field.name.includes('Deductible') || field.name.includes('Depreciation') ||
-                     field.name.includes('PWI') || field.name.includes('PPS')) && 
-                    !isNaN(field.value)) {
-                  try {
-                    displayValue = parseFloat(field.value).toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD'
-                    });
-                  } catch (e) {
-                    // Keep original value if formatting fails
-                  }
-                }
-              %>
-                <div class="info-item">
-                  <label><%= field.name %></label>
-                  <span><%= displayValue %></span>
-                </div>
-              <% }); %>
-            </div>
-          <% } else { %>
-            <div class="info-item">
-              <p>No additional information available.</p>
-            </div>
-          <% } %>
-        </div>
-      </div>
+      <!-- Additional Information section removed - content moved to Key Information -->
 
       <!-- Group 7: Comments & Activity -->
       <div class="detail-section collapsible">
@@ -353,6 +326,14 @@
 }
 
 .section-header h3 {
+  margin: 0;
+}
+
+.section-header-fixed {
+  padding: 1rem 0;
+}
+
+.section-header-fixed h3 {
   margin: 0;
 }
 
@@ -504,16 +485,16 @@ function toggleSection(header) {
   }
 }
 
-// Optional: Expand first section by default
+// Optional: Expand first collapsible section by default (after Key Information)
 document.addEventListener('DOMContentLoaded', function() {
-  const firstSection = document.querySelector('.detail-section');
-  if (firstSection) {
-    firstSection.classList.add('expanded');
-    firstSection.querySelector('.section-content').style.display = 'block';
+  const firstCollapsibleSection = document.querySelector('.detail-section.collapsible');
+  if (firstCollapsibleSection) {
+    firstCollapsibleSection.classList.add('expanded');
+    firstCollapsibleSection.querySelector('.section-content').style.display = 'block';
   }
 });
 
-// Comment form submission
+// Comment form submission with JWT authentication
 document.getElementById('comment-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   
@@ -533,11 +514,9 @@ document.getElementById('comment-form').addEventListener('submit', async functio
   submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
   
   try {
-    const response = await fetch(`/claims/${claimId}/comment`, {
+    // Use the auth manager for authenticated requests
+    const response = await authManager.makeRequest(`/claims/${claimId}/comment`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify({
         comment_text: commentText,
         notify_all: notifyAll

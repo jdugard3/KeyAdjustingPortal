@@ -58,7 +58,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['master_admin', 'admin', 'user'],
     default: 'user'
-  }
+  },
+  refreshTokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      expires: 604800 // 7 days in seconds
+    },
+    userAgent: String,
+    ip: String
+  }]
 }, { 
   strict: true,
   timestamps: true,
@@ -96,6 +109,39 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 // Add a method to check if user is master admin
 userSchema.methods.isMasterAdmin = function() {
   return this.email === 'admin@test.com';
+};
+
+// Add refresh token
+userSchema.methods.addRefreshToken = function(token, userAgent, ip) {
+  // Remove old tokens for this user (keep max 5 active sessions)
+  if (this.refreshTokens.length >= 5) {
+    this.refreshTokens = this.refreshTokens.slice(-4);
+  }
+  
+  this.refreshTokens.push({
+    token,
+    userAgent,
+    ip
+  });
+  
+  return this.save();
+};
+
+// Remove refresh token
+userSchema.methods.removeRefreshToken = function(token) {
+  this.refreshTokens = this.refreshTokens.filter(tokenObj => tokenObj.token !== token);
+  return this.save();
+};
+
+// Remove all refresh tokens (logout from all devices)
+userSchema.methods.removeAllRefreshTokens = function() {
+  this.refreshTokens = [];
+  return this.save();
+};
+
+// Check if refresh token exists and is valid
+userSchema.methods.hasRefreshToken = function(token) {
+  return this.refreshTokens.some(tokenObj => tokenObj.token === token);
 };
 
 const User = mongoose.model('User', userSchema);
