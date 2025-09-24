@@ -167,32 +167,37 @@ class ClickUpService {
     }
   }
 
-  // Add a comment to a task and assign it to the Key PA
-  async addTaskComment(taskId, commentData) {
+  // Add a comment to a task (optionally assign to Key PA if no subtask will be created)
+  async addTaskComment(taskId, commentData, assignToKeyPA = true) {
     try {
       console.log(`Adding comment to task ${taskId}:`, commentData);
       
-      // Get the task details to find the Key PA
-      const taskDetails = await this.getTask(taskId);
-      
-      // Find the Key PA field
-      const keyPAField = taskDetails.custom_fields.find(field => 
-        field.name === '🙎‍♂️ Key PA' || field.name === 'Key PA'
-      );
-      
-      // If Key PA exists and has a value, assign the comment to them
-      if (keyPAField && keyPAField.value && keyPAField.value.length > 0) {
-        // For user fields, the value is typically an array of user objects
-        const keyPAUser = keyPAField.value[0];
-        console.log('Found Key PA user:', keyPAUser);
+      // Only assign to Key PA if explicitly requested (when no subtask is being created)
+      if (assignToKeyPA) {
+        // Get the task details to find the Key PA
+        const taskDetails = await this.getTask(taskId);
         
-        // Add the assignee to the comment data
-        if (keyPAUser.id) {
-          commentData.assignee = keyPAUser.id;
-          console.log('Assigning comment to Key PA:', keyPAUser.id);
+        // Find the Key PA field
+        const keyPAField = taskDetails.custom_fields.find(field => 
+          field.name === '🙎‍♂️ Key PA' || field.name === 'Key PA'
+        );
+        
+        // If Key PA exists and has a value, assign the comment to them
+        if (keyPAField && keyPAField.value && keyPAField.value.length > 0) {
+          // For user fields, the value is typically an array of user objects
+          const keyPAUser = keyPAField.value[0];
+          console.log('Found Key PA user:', keyPAUser);
+          
+          // Add the assignee to the comment data
+          if (keyPAUser.id) {
+            commentData.assignee = keyPAUser.id;
+            console.log('Assigning comment to Key PA:', keyPAUser.id);
+          }
+        } else {
+          console.log('No Key PA found for this task or field is empty');
         }
       } else {
-        console.log('No Key PA found for this task or field is empty');
+        console.log('Skipping Key PA assignment - subtask will handle follow-up');
       }
       
       const response = await this.api.post(
@@ -204,6 +209,116 @@ class ClickUpService {
       return response.data;
     } catch (error) {
       console.error('Error adding task comment:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // Create a subtask from a parent task
+  async createSubtask(parentTaskId, subtaskData) {
+    try {
+      console.log(`Creating subtask for parent task ${parentTaskId}:`, subtaskData);
+      
+      // Get parent task details to extract list_id
+      const parentTask = await this.getTask(parentTaskId);
+      const listId = parentTask.list.id;
+      
+      console.log(`Parent task details - List ID: ${listId}, Task ID: ${parentTaskId}`);
+      
+      // Prepare subtask payload with explicit parent reference
+      const subtaskPayload = {
+        name: subtaskData.name,
+        description: subtaskData.description || '',
+        parent: parentTaskId, // This is the key field that makes it a subtask
+        assignees: Array.isArray(subtaskData.assignees) ? subtaskData.assignees : [],
+        priority: subtaskData.priority || 3, // Default to normal priority (3)
+        status: subtaskData.status || 'new claim' // Use the first available status for Active Claims list
+      };
+
+      // Only add optional fields if they have values
+      if (subtaskData.due_date) {
+        subtaskPayload.due_date = subtaskData.due_date;
+      }
+      if (subtaskData.start_date) {
+        subtaskPayload.start_date = subtaskData.start_date;
+      }
+      if (subtaskData.custom_fields && Array.isArray(subtaskData.custom_fields)) {
+        subtaskPayload.custom_fields = subtaskData.custom_fields;
+      }
+
+      console.log('Subtask payload:', JSON.stringify(subtaskPayload, null, 2));
+
+      const response = await this.api.post(
+        `/list/${listId}/task?custom_task_ids=true&team_id=${this.TEAM_ID}`,
+        subtaskPayload
+      );
+      
+      console.log('Subtask creation response:', JSON.stringify(response.data, null, 2));
+      console.log(`Successfully created subtask ${response.data.id} under parent ${parentTaskId}`);
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error creating subtask:', error.response?.data || error.message);
+      console.error('Full error response:', error.response);
+      throw error;
+    }
+  }
+
+  // Add a comment and optionally create a subtask based on user type
+  async addTaskCommentWithSubtask(taskId, commentData, createSubtask = false, userInfo = null) {
+    try {
+      console.log(`Adding comment with potential subtask creation for task ${taskId}`);
+      console.log(`User info:`, userInfo);
+      console.log(`Create subtask:`, createSubtask);
+      
+      // First add the comment (don't assign to Key PA if we're creating a subtask)
+      const commentResponse = await this.addTaskComment(taskId, commentData, !createSubtask);
+      console.log(`Comment added successfully:`, commentResponse);
+      
+      // If subtask creation is requested, create one
+      if (createSubtask && userInfo) {
+        console.log('Creating subtask...');
+        
+        // Get parent task to find Key PA for assignment
+        const parentTask = await this.getTask(taskId);
+        const keyPAField = parentTask.custom_fields.find(field => 
+          field.name === '🙎‍♂️ Key PA' || field.name === 'Key PA'
+        );
+        
+        let assignees = [];
+        if (keyPAField && keyPAField.value && keyPAField.value.length > 0) {
+          // For user fields, extract the user ID
+          const keyPAUser = keyPAField.value[0];
+          if (keyPAUser && keyPAUser.id) {
+            assignees = [parseInt(keyPAUser.id)]; // ClickUp expects integer user IDs
+            console.log(`Assigning subtask to Key PA: ${keyPAUser.id} (${keyPAUser.username || keyPAUser.name})`);
+          }
+        }
+        
+        const subtaskName = `Follow-up: ${commentData.comment_text.substring(0, 50)}${commentData.comment_text.length > 50 ? '...' : ''}`;
+        const subtaskDescription = `Created from comment by ${userInfo.name} (${userInfo.email}):\n\n"${commentData.comment_text}"`;
+        
+        const subtaskData = {
+          name: subtaskName,
+          description: subtaskDescription,
+          assignees: assignees,
+          priority: 3, // Normal priority
+          status: 'new claim'
+        };
+
+        console.log('Subtask data:', subtaskData);
+        const subtaskResponse = await this.createSubtask(taskId, subtaskData);
+        
+        console.log(`Subtask created successfully: ${subtaskResponse.id}`);
+        
+        return {
+          comment: commentResponse,
+          subtask: subtaskResponse
+        };
+      }
+      
+      return { comment: commentResponse };
+    } catch (error) {
+      console.error('Error adding comment with subtask:', error.response?.data || error.message);
       throw error;
     }
   }

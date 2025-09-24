@@ -58,14 +58,15 @@ router.get('/dashboard', isAdmin, async (req, res) => {
 // Add new user
 router.post('/users', isAdmin, async (req, res) => {
   try {
-    const { email, password, name, contractorId, isAdmin } = req.body;
+    const { email, password, name, contractorId, isAdmin, userType } = req.body;
     
     const user = await User.create({
       email,
       password,
       name,
       contractorId,
-      isAdmin: isAdmin === 'true'
+      isAdmin: isAdmin === 'true',
+      userType: userType || 'contractor'
     });
 
     res.json(user);
@@ -160,7 +161,8 @@ router.post('/create-admin', isMasterAdmin, async (req, res) => {
       password, // The User model's pre-save hook will hash this
       isAdmin: true,
       contractorId: 'ADMIN',
-      status: 'active'
+      status: 'active',
+      userType: 'admin'
     });
 
     console.log('Admin created successfully:', admin);

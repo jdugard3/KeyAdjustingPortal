@@ -178,21 +178,82 @@ router.get('/:claimId/comments', isAuthenticated, async (req, res) => {
 router.post('/:claimId/comment', isAuthenticated, async (req, res) => {
   try {
     const claimId = req.params.claimId;
-    const { comment_text, notify_all } = req.body;
+    const { comment_text, notify_all, create_subtask } = req.body;
     
     if (!comment_text) {
       return res.status(400).json({ error: 'Comment text is required' });
     }
+
+    console.log('Comment request - User:', req.user);
+    console.log('Comment request - Body:', { comment_text, notify_all, create_subtask });
     
-    const result = await clickupService.addTaskComment(claimId, {
-      comment_text,
-      notify_all: notify_all !== false
-    });
+    // Determine if a subtask should be created based on user type or explicit request
+    const shouldCreateSubtask = create_subtask === true || 
+                               req.user.userType === 'sales' || 
+                               (req.user.userType === 'contractor' && req.user.isAdmin === true) ||
+                               // Fallback for testing - if create_subtask is explicitly requested
+                               create_subtask === 'true';
+
+    console.log('Should create subtask:', shouldCreateSubtask);
+    console.log('User type:', req.user.userType, 'Is Admin:', req.user.isAdmin);
+
+    let result;
+    
+    if (shouldCreateSubtask) {
+      console.log('Using enhanced method to create subtask...');
+      // Use the enhanced method that can create subtasks
+      result = await clickupService.addTaskCommentWithSubtask(
+        claimId,
+        {
+          comment_text,
+          notify_all: notify_all !== false
+        },
+        true, // Create subtask
+        req.user // Pass user info for subtask creation
+      );
+    } else {
+      console.log('Using standard comment method (no subtask)...');
+      // Use the standard comment method
+      result = await clickupService.addTaskComment(claimId, {
+        comment_text,
+        notify_all: notify_all !== false
+      });
+    }
     
     res.json(result);
   } catch (error) {
     console.error('Error adding comment:', error);
     res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Test endpoint for subtask creation (for debugging)
+router.post('/:claimId/test-subtask', isAuthenticated, async (req, res) => {
+  try {
+    const claimId = req.params.claimId;
+    console.log('Testing subtask creation for claim:', claimId);
+    
+    const subtaskData = {
+      name: 'Test Subtask from API',
+      description: 'This is a test subtask created to verify the API integration.',
+      assignees: [],
+      priority: 3,
+      status: 'to do'
+    };
+
+    const result = await clickupService.createSubtask(claimId, subtaskData);
+    
+    res.json({ 
+      success: true, 
+      message: 'Test subtask created successfully',
+      subtask: result 
+    });
+  } catch (error) {
+    console.error('Error creating test subtask:', error);
+    res.status(500).json({ 
+      error: 'Failed to create test subtask',
+      details: error.message 
+    });
   }
 });
 

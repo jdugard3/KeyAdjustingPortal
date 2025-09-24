@@ -59,6 +59,11 @@ const userSchema = new mongoose.Schema({
     enum: ['master_admin', 'admin', 'user'],
     default: 'user'
   },
+  userType: {
+    type: String,
+    enum: ['contractor', 'sales', 'admin'],
+    default: 'contractor'
+  },
   refreshTokens: [{
     token: {
       type: String,

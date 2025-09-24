@@ -85,7 +85,8 @@ const isAuthenticated = async (req, res, next) => {
         name: decoded.name,
         contractorId: decoded.contractorId,
         role: decoded.role,
-        isAdmin: decoded.isAdmin
+        isAdmin: decoded.isAdmin,
+        userType: decoded.userType
       };
       return next();
     }

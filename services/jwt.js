@@ -16,7 +16,8 @@ class JWTService {
       name: user.name,
       contractorId: user.contractorId,
       role: user.role || 'user',
-      isAdmin: user.isAdmin || false
+      isAdmin: user.isAdmin || false,
+      userType: user.userType || 'contractor'
     };
 
     return jwt.sign(payload, this.JWT_SECRET, {
