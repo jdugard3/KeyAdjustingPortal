@@ -481,8 +481,8 @@ function toggleSection(header) {
   const content = section.querySelector('.section-content');
   const isExpanded = section.classList.contains('expanded');
   
-  // Close all sections first
-  document.querySelectorAll('.detail-section').forEach(s => {
+  // Close all OTHER collapsible sections first (but NOT the Key Information section)
+  document.querySelectorAll('.detail-section.collapsible').forEach(s => {
     if (s !== section) {
       s.classList.remove('expanded');
       s.querySelector('.section-content').style.display = 'none';
